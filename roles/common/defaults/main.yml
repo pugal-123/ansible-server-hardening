@@ -1,0 +1,4 @@
+---
+timezone: UTC
+max_log_file_size: 10
+log_retention_days: 30

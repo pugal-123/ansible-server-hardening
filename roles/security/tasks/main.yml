@@ -1,0 +1,85 @@
+---
+- name: Disable root login
+  lineinfile:
+    path: /etc/passwd
+    regexp: '^root:(.*):/bin/bash$'
+    line: 'root:\1:/usr/sbin/nologin'
+    backrefs: yes
+
+- name: Set password expiry policy
+  lineinfile:
+    path: /etc/login.defs
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^PASS_MAX_DAYS', line: 'PASS_MAX_DAYS   90' }
+    - { regexp: '^PASS_MIN_DAYS', line: 'PASS_MIN_DAYS   7' }
+    - { regexp: '^PASS_WARN_AGE', line: 'PASS_WARN_AGE   14' }
+
+- name: Disable unused filesystems
+  lineinfile:
+    path: /etc/modprobe.d/blacklist.conf
+    line: "install {{ item }} /bin/true"
+    create: yes
+  loop:
+    - cramfs
+    - freevxfs
+    - jffs2
+    - hfs
+    - hfsplus
+    - squashfs
+    - udf
+
+- name: Set kernel security parameters
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: 'net.ipv4.ip_forward', value: '0' }
+    - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.all.send_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+    - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+    - { name: 'net.ipv6.conf.all.disable_ipv6', value: '1' }
+    - { name: 'kernel.randomize_va_space', value: '2' }
+
+- name: Configure fail2ban
+  copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      bantime  = 3600
+      findtime = 600
+      maxretry = 3
+      backend  = systemd
+
+      [sshd]
+      enabled  = true
+      port     = ssh
+      logpath  = %(sshd_log)s
+      maxretry = 3
+  notify: restart fail2ban
+
+- name: Enable and start auditd
+  service:
+    name: auditd
+    state: started
+    enabled: yes
+
+- name: Configure audit rules
+  copy:
+    dest: /etc/audit/rules.d/hardening.rules
+    content: |
+      # Monitor authentication events
+      -w /etc/passwd -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+      -w /etc/sudoers -p wa -k sudoers
+      # Monitor login/logout
+      -w /var/log/faillog -p wa -k logins
+      -w /var/log/lastlog -p wa -k logins
+      # Monitor network configuration
+      -w /etc/hosts -p wa -k network
+      -w /etc/network -p wa -k network
+  notify: restart auditd
