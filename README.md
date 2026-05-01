@@ -62,3 +62,16 @@ vagrant up
 ## 👤 Author
 **Pugazhenthi Muthu** — DevOps Engineer
 github.com/pugal-123
+
+## 📸 Live Output
+
+### ✅ Playbook Completed — failed=0
+![Playbook Output](screenshots/playbook-output.png)
+
+### 🔒 Security Applied
+- ok=25 tasks completed successfully
+- UFW Firewall active — deny all incoming except SSH/HTTP/HTTPS
+- SSH hardened — root login disabled, max 3 attempts
+- Fail2ban active — bans IPs after 3 failed attempts
+- Auditd monitoring — tracks all critical file changes
+- All security roles applied on Ubuntu 22.04

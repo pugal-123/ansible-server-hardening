@@ -16,10 +16,10 @@
       - fail2ban
       - unattended-upgrades
       - auditd
-      - aide
       - curl
       - wget
       - git
+      - tzdata
     state: present
 
 - name: Enable unattended upgrades
@@ -39,5 +39,5 @@
     purge: yes
 
 - name: Set timezone to UTC
-  timezone:
-    name: UTC
+  command: ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+  changed_when: false
